@@ -1,7 +1,10 @@
-The R script takes summarized RPKM values (from the output of summarize_RPKM_individual_chr.smk) at each chromosome and normalizes the counts by chromosome size (bp). The normalized RPKM at chromosome level is calculated for H4K16ac, H3K9me3 and IgG in spermatogonia (SSC), spermatocytes (SPC) and spermatids (SPD). The normalized RPKM is reffered as chromosome coverage in the script annotation, but is different from the traditional coverage, as it's not the percentage of each chromosome covered by reads. To compare the coverage of autosomes and X chromosome, the normalized RPKM from H4K16ac and H3K9me3 was normalized again by the normalized RPKM of IgG, to get rid of the potential bias from copy number and accessibility of chromosomes.
+#The R script takes summarized RPKM values (from the output of summarize_RPKM_individual_chr.smk) at each chromosome and normalizes the counts by chromosome size (bp). 
+#The normalized RPKM at chromosome level is calculated for H4K16ac, H3K9me3 and IgG in spermatogonia (SSC), spermatocytes (SPC) and spermatids (SPD). 
+#The normalized RPKM is reffered as chromosome coverage in the script annotation, but is different from the traditional coverage, as it's not the percentage of each chromosome covered by reads. 
+#To compare the coverage of autosomes and X chromosome, the normalized RPKM from H4K16ac and H3K9me3 was normalized again by the normalized RPKM of IgG, to get rid of the potential bias from copy number and accessibility of chromosomes.
 
 
-#compare RPKM coverage of chrX and autosome, between H4K16ac and H3K9me, from SPG, SPC and SPD####
+#compare RPKM coverage of chrX and autosome, between H4K16ac and H3K9me3, from SPG, SPC and SPD####
 all_cov <- read.table("/data/akhtar/group2/zhao/spermatogenic_CUTnX/SSCs_CUTnTAG_2967/marker_compare/chr_coverage/coverage/SSC_SPC_SPD_seqnorm_cov_merge.txt",
                       header = TRUE)
 rownames(all_cov) <- all_cov$chr
