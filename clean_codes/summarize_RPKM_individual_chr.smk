@@ -1,3 +1,6 @@
+#This is a snakemake file to summarize the normalized counts from CUT&TAG experiments, using the method RPKM (RPKM = Reads Per Kilobase per Million mapped reads). The provided region is individual chromosomes with coordinates.
+
+
 #snakefile
 import glob
 import os
