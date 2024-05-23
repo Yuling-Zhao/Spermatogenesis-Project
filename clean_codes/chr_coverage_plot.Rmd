@@ -59,8 +59,8 @@ IgG_cov <- data.frame(
   marker = c(rep("IgG", 6))
 )
 
-#the coverage get from the calculation is not really how much percentage of each chromosome is covered, so it's unnecessary to be less than 1;
-#It reflexts the distribution of normalized counts to each chromosome, considering the bias from chromosome size (bigger chromosomes in principle may get more reads by chance);
+#the coverage from the calculation is not really how much percentage of each chromosome is covered, so it's unnecessary to be less than 1;
+#It reflects the distribution of normalized counts to each chromosome, considering the bias from chromosome size (bigger chromosomes in principle may get more reads by chance);
 
 
 k16ac_dat_norm <- c("cov_norm", "stage", "chr")
