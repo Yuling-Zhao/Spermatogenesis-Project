@@ -1,4 +1,5 @@
 //This script uses maximum intensity projection method to get the best focus slice from z stack of each time point;
+//This script uses user defined regions before doing maximum intensity projection, so to focus on a single cell and find the best focus;
 
 
 baseDirectory = getDir("");
