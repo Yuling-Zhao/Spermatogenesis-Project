@@ -25,3 +25,10 @@ hicPCA \
 --method lieberman \
 --format bedgraph \
 -o /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/09_predictions/YZ_Neg_NPCs_dedup_sel_50kb_noY_pca1.bedgraph
+
+hicPlotTADs \
+--tracks /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/09_predictions/all_noY_merge_track.ini \
+--region 1:60000000-80000000 \
+--dpi 300 \
+--outFileName /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/08_plots/YZ_all_1_50kb_merge_noY_chr1.png \
+--title "All on chr1"
