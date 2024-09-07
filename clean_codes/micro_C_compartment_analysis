@@ -1,0 +1,27 @@
+#merge matrices from replicates with only valid micro-C contacts
+#neg
+hicSumMatrices \
+--matrices /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/06_matrix/YZ_Neg_NPCs_1_dedup_sel_10kb.cool \
+/data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/06_matrix/YZ_Neg_NPCs_2_dedup_sel_10kb.cool \
+--outFileName /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/07_merged_matrix/YZ_Neg_NPCs_dedup_sel_10kb.cool
+
+#merge to 50kb
+hicMergeMatrixBins \
+--matrix /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/07_merged_matrix/YZ_Neg_NPCs_dedup_sel_10kb.cool \
+--numBins 5 \
+--outFileName /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/07_merged_matrix/YZ_Neg_NPCs_dedup_sel_50kb.cool
+
+#remove chrY
+hicAdjustMatrix \
+--matrix /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/07_merged_matrix/YZ_Neg_NPCs_dedup_sel_50kb.cool \
+--chromosomes 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X \
+--action keep \
+--outFileName /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/07_merged_matrix/YZ_Neg_NPCs_dedup_sel_50kb_noY.cool
+
+#PCA predict A/B compartments using raw matrix (without Y)
+hicPCA \
+-m /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/07_merged_matrix/YZ_Neg_NPCs_dedup_sel_50kb_noY.cool \
+-we 1 \
+--method lieberman \
+--format bedgraph \
+-o /data/akhtar/group6/zhao/microC/NPC_microC_3247/microC_loose/09_predictions/YZ_Neg_NPCs_dedup_sel_50kb_noY_pca1.bedgraph
