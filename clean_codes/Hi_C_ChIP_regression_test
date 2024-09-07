@@ -1,0 +1,64 @@
+#use SPG weights to predict for SPC
+#prepare table containing pca, H4K16ac and H3K9me3 normalized counts
+import pandas as pd
+
+h3k9me3_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPC_H3K9me3_1_auto.bed", header = None)
+h4k16ac_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPC_H4K16ac_1_auto.bed", header = None)
+
+#I re-defined the pca1 signal according to the transcriptio status
+#it's more natural to have A compartment as positive values
+#pca is the already positive for A compartments after prediction
+pca1 = -h3k9me3_dat.iloc[:, 3]
+h3k9me3 = h3k9me3_dat.iloc[:, 4]
+h4k16ac = h4k16ac_dat.iloc[:, 4]
+
+from sklearn.linear_model import SGDRegressor
+from sklearn.preprocessing import StandardScaler
+
+# Combine h3k9me3 and h4k16ac into a single DataFrame
+features_df = pd.DataFrame({
+    'H3K9me3': h3k9me3,
+    'H4K16ac': h4k16ac,
+    'H3K27me3': h3k27me3,
+    'H3K27ac': h3k27ac
+})
+
+
+# Convert features to a NumPy array
+X_test = features_df.to_numpy()
+
+# Convert target to a NumPy array
+y_test = pca1.to_numpy()
+
+#Scale/normalize the training data
+X_norm = scaler.transform(X_test)
+print(f"Peak to Peak range by column in Raw        X:{np.ptp(X_test,axis=0)}")   
+print(f"Peak to Peak range by column in Normalized X:{np.ptp(X_norm,axis=0)}")
+
+# make a prediction using sgdr.predict()
+y_pred_sgd = sgdr.predict(X_norm)
+
+#add predict pca to bed file and compare on IGV first
+pca_pred = {
+    'chr':h3k9me3_dat.iloc[:, 0],
+    'start': h3k9me3_dat.iloc[:, 1],
+    'end': h3k9me3_dat.iloc[:, 2],
+    'pca_pred' : y_pred_sgd
+}
+
+pca_pred_dat = pd.DataFrame(pca_pred)
+
+pca_flip = {
+    'chr':h3k9me3_dat.iloc[:, 0],
+    'start': h3k9me3_dat.iloc[:, 1],
+    'end': h3k9me3_dat.iloc[:, 2],
+    'pca_flip' : pca1
+}
+
+pca_flip_dat = pd.DataFrame(pca_flip)
+
+pca_pred_dat.to_csv('/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPC_pca1_pred_auto.bedgraph', 
+                    sep='\t', header=False, index=False, quoting=3)
+
+pca_flip_dat.to_csv('/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPC_pca1_flip_auto.bedgraph', 
+                    sep='\t', header=False, index=False, quoting=3)
