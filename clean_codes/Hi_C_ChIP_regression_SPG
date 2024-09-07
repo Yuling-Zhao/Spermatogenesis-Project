@@ -1,0 +1,116 @@
+bedtools intersect -a /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/PCA/SPG_HiC_bs50kb_corrected_noY_pca1.bedgraph \
+-b /data/akhtar/group6/zhao/spermatogenic_CUTnX/SSCs_CUTnTAG_3037/SEACR/bedgraph/SSC_H3K9me3_1_seqnorm.filtered.bedgraph \
+-wao | cut -f 1-4,8 | sort -k1,1 -k2,2n | \
+bedtools groupby -g 1-4 -c 5 -o sum \
+>/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H3K9me3_1_auto.bed
+
+bedtools intersect -a /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/PCA/SPG_HiC_bs50kb_corrected_noY_pca1.bedgraph \
+-b /data/akhtar/group6/zhao/spermatogenic_CUTnX/SSCs_CUTnTAG_3201/SEACR/bedgraph/SSC_H4K16ac_1.filtered.seqnorm.bedgraph \
+-wao | cut -f 1-4,8 | sort -k1,1 -k2,2n | \
+bedtools groupby -g 1-4 -c 5 -o sum \
+>/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H4K16ac_1_auto.bed
+
+#prepare table containing pca, H4K16ac and H3K9me3 normalized counts
+import pandas as pd
+from scipy.stats import zscore
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.colors as mcolors
+
+h3k9me3_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H3K9me3_1_auto.bed", header = None)
+h4k16ac_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H4K16ac_1_auto.bed", header = None)
+
+#I re-defined the pca1 signal according to the transcriptio status
+#it's more natural to have A compartment as positive values
+pca1 = -h3k9me3_dat.iloc[:, 3]
+h3k9me3 = h3k9me3_dat.iloc[:, 4]
+h4k16ac = h4k16ac_dat.iloc[:, 4]
+#scale h3k9me3 and h4k16ac normalized counts with Z-score 
+h3k9me3_z = zscore(h3k9me3)
+h4k16ac_z = zscore(h4k16ac)
+
+#combine pca1 with z scores as new table
+pre_dat = {
+    'pca':pca1,
+    'H3K9me3': h3k9me3_z,
+    'H4K16ac': h4k16ac_z
+}
+
+pre_dat = pd.DataFrame(pre_dat)
+
+#plot H4K16ac and H3K9me3 for chr1 (top 200, 1M)
+# Create a colormap that goes from blue through white to red
+colors = ['blue', 'lightgrey', 'red']
+cmap = mcolors.LinearSegmentedColormap.from_list('blue_grey_red', colors)
+# Normalize the color to force white at 0
+norm = mcolors.TwoSlopeNorm(vmin=np.min(pca1[1200:1400]), vcenter=0, vmax=np.max(pca1[1200:1400]))
+
+# Scatter plot with gradient color
+plt.scatter(pre_dat['H3K9me3'][1200:1400], pre_dat['H4K16ac'][1200:1400], c=pre_dat['pca'][1200:1400], cmap=cmap, norm=norm, marker='x')
+plt.colorbar(label='PCA1')  # Add a colorbar to show the color scale
+plt.title("Scaled normalized counts of H3K9me3 and H4K16ac")
+plt.xlabel('H3K9me3')
+plt.ylabel('H4K16ac')
+plt.savefig('/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/H3K9me3_H4K16ac_chr1_60_70_pca',dpi=600)
+plt.show()
+
+from sklearn.linear_model import SGDRegressor
+from sklearn.preprocessing import StandardScaler
+
+#try only 125M for training
+# Combine h3k9me3 and h4k16ac into a single DataFrame
+features_df = pd.DataFrame({
+    'H3K9me3': h3k9me3,
+    'H4K16ac': h4k16ac
+})
+
+# Convert features to a NumPy array
+X_train = features_df.to_numpy()
+
+# Convert target to a NumPy array
+y_train = pca1.to_numpy()
+
+#Scale/normalize the training data
+scaler = StandardScaler()
+X_norm = scaler.fit_transform(X_train)
+print(f"Peak to Peak range by column in Raw        X:{np.ptp(X_train,axis=0)}")   
+print(f"Peak to Peak range by column in Normalized X:{np.ptp(X_norm,axis=0)}")
+print(f"mean by column in Raw        X:{np.mean(X_train,axis=0)}")
+print(f"mean by column in Normalized X:{np.mean(X_norm,axis=0)}")
+
+#Create and fit the regression model
+sgdr = SGDRegressor(max_iter=1000)
+sgdr.fit(X_norm[0:2500], y_train[0:2500])
+print(sgdr)
+print(f"number of iterations completed: {sgdr.n_iter_}, number of weight updates: {sgdr.t_}")
+
+#View parameters
+b_norm = sgdr.intercept_
+w_norm = sgdr.coef_
+print(f"model parameters:                   w: {w_norm}, b:{b_norm}")
+
+#add predict pca to bed file and compare on IGV first
+pca_pred = {
+    'chr':h3k9me3_dat.iloc[:, 0],
+    'start': h3k9me3_dat.iloc[:, 1],
+    'end': h3k9me3_dat.iloc[:, 2],
+    'pca_pred' : y_pred_sgd
+}
+
+pca_flip = {
+    'chr':h3k9me3_dat.iloc[:, 0],
+    'start': h3k9me3_dat.iloc[:, 1],
+    'end': h3k9me3_dat.iloc[:, 2],
+    'pca_flip' : pca1
+}
+
+pca_pred_dat = pd.DataFrame(pca_pred)
+pca_flip_dat = pd.DataFrame(pca_flip)
+
+
+pca_flip_dat.to_csv('/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_pca1_flip_auto.bedgraph', 
+                    sep='\t', header=False, index=False, quoting=3)
+
+pca_pred_dat.to_csv('/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_pca1_pred_auto.bedgraph', 
+                    sep='\t', header=False, index=False, quoting=3)
