@@ -1,0 +1,84 @@
+#snakePipes/2.5.1
+HiC \
+-i /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/fastq \
+-o /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake \
+-v -j 11 --DAG --trim --fastqc \
+--enzyme DpnII \
+mm10
+
+#use before-corrected matrix
+#merge matrices from replicates
+hicSumMatrices \
+--matrices /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices/SPG_HiC_1_bs10kb.cool \
+/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices/SPG_HiC_2_bs10kb.cool \
+--outFileName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs10kb.cool
+
+#merge matrix bins for plotting: from 10kb to 50kb
+hicMergeMatrixBins \
+--matrix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs10kb.cool \
+--numBins 5 \
+--outFileName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb.cool
+
+
+#correct merged matrix, but ignore Y
+hicCorrectMatrix diagnostic_plot \
+--chromosomes 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X \
+--matrix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb.cool \
+--plotName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/plots/SPG_HiC_bs50kb_noY_diagnostic_plot.png
+
+hicCorrectMatrix correct \
+--chromosomes 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X \
+--matrix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb.cool \
+--correctionMethod ICE \
+--filterThreshold -4.5 4 --perchr \
+--outFileName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb_corrected_noY.cool
+
+#plot correct matrix
+hicPlotMatrix \
+--matrix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb_corrected_noY.cool \
+--log1p \
+--dpi 300 \
+--clearMaskedBins \
+--chromosomeOrder 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X \
+--colorMap jet \
+--title "Hi-C matrix for SPG" \
+--outFileName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/plots/SPG_HiC_bs50kb_corrected_noY.png
+
+#Find TADs
+hicFindTADs \
+--matrix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb_corrected_noY.cool \
+--minDepth 150000 --maxDepth 500000 --numberOfProcessors 8 --step 50000 \
+--outPrefix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/TADs/SPG_HiC_bs50kb_corrected_noY \
+--minBoundaryDistance 150000 \
+--correctForMultipleTesting fdr --threshold 0.01
+
+#calculate the first eigenvector
+#except chrY
+hicPCA \
+-m /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb_corrected_noY.cool \
+-we 1 \
+--method lieberman \
+--format bedgraph \
+-o /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/PCA/SPG_HiC_bs50kb_corrected_noY_pca1.bedgraph
+
+#only chrX
+hicAdjustMatrix \
+--matrix /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb.cool \
+--chromosomes X \
+--action keep \
+--outFileName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb_X.cool
+
+hicPCA \
+-m /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/HiC_snake/HiC_matrices_merged/SPG_HiC_bs50kb_X.cool \
+-we 1 \
+--method dist_norm \
+--format bedgraph \
+-o /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/PCA/SPG_HiC_bs50kb_X_pca1.bedgraph
+
+#plot
+hicPlotTADs \
+--tracks /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/TADs/SPG_auto_track.ini \
+--region 1:60000000-80000000 \
+--dpi 300 \
+--outFileName /data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/plots/SPG_HiC_bs50kb_noY_TADs_chr1.png \
+--title "SPG TADs on chr1"
