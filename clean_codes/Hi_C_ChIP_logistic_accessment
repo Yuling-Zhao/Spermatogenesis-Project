@@ -1,0 +1,125 @@
+#use SPG chr1 data to train and test logistic regression model
+
+import pandas as pd
+
+# Load data and rename columns
+h3k9me3_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H3K9me3_1_auto.bed", header=None)
+h4k16ac_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H4K16ac_1_auto.bed", header=None)
+h3k27ac_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPG_H3K27ac_1_auto.bed", header=None)
+
+h3k9me3_dat.columns = ['chr', 'start', 'end', 'pca', 'h3k9me3']
+h4k16ac_dat.columns = ['chr', 'start', 'end', 'pca', 'h4k16ac']
+h3k27ac_dat.columns = ['chr', 'start', 'end', 'pca', 'h3k27ac']
+
+# Negate 'pca' values
+h3k9me3_dat['pca'] = -h3k9me3_dat['pca']
+
+# Extract relevant columns
+pre_dat = pd.DataFrame({
+    'chr' : h3k9me3_dat['chr'],    
+    'pca': h3k9me3_dat['pca'],    
+    'H3K9me3': h3k9me3_dat['h3k9me3'],
+    'H4K16ac': h4k16ac_dat['h4k16ac'],
+    'H3K27ac': h3k27ac_dat['h3k27ac']
+})
+
+# Remove rows where 'pca' is 0
+pre_dat = pre_dat[pre_dat['pca'] != 0]
+
+print(pre_dat.head())
+
+# Filter for chromosome 1 data
+chr1_dat = pre_dat[pre_dat['chr'] == '1']
+
+# Define target variable y for binary classification
+y = chr1_dat['pca'].apply(lambda x: 0 if x < 0 else 1)
+
+# Define features X (H4K16ac and H3K9me3)
+X_169 = chr1_dat[['H4K16ac', 'H3K9me3']]
+
+# split into train-test sets
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X_169, y, test_size=0.3, random_state=27)
+
+print(pd.DataFrame(X_169))
+print(pd.Series(y))
+
+from sklearn.linear_model import LogisticRegression
+# logistic regression
+mod_log = LogisticRegression()
+
+# fit model
+mod_log.fit(X_train, y_train)
+
+# predict probabilities
+pred_prob = mod_log.predict_proba(X_test)
+
+from sklearn.metrics import roc_curve
+
+# roc curve for models
+fpr_169, tpr_169, thresh = roc_curve(y_test, pred_prob[:,1], pos_label=1)
+
+# roc curve for tpr = fpr 
+random_probs = [0 for i in range(len(y_test))]
+p_fpr, p_tpr, _ = roc_curve(y_test, random_probs, pos_label=1)
+
+from sklearn.metrics import roc_auc_score
+
+# auc scores
+auc_score = roc_auc_score(y_test, pred_prob[:,1])
+
+print(auc_score)
+
+#use SPG weights to predict for RS
+import pandas as pd
+
+# Load data and rename columns
+h3k9me3_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPD_H3K9me3_1_auto.bed", header=None)
+h4k16ac_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPD_H4K16ac_1_auto.bed", header=None)
+h3k27ac_dat = pd.read_table("/data/akhtar/group6/zhao/published_HiC/GSE132054_cell_rep/predict/SPD_H3K27ac_1_auto.bed", header=None)
+
+h3k9me3_dat.columns = ['chr', 'start', 'end', 'pca', 'h3k9me3']
+h4k16ac_dat.columns = ['chr', 'start', 'end', 'pca', 'h4k16ac']
+h3k27ac_dat.columns = ['chr', 'start', 'end', 'pca', 'h3k27ac']
+
+# Negate 'pca' values
+h3k9me3_dat['pca'] = -h3k9me3_dat['pca']
+
+# Extract relevant columns
+pre_dat = pd.DataFrame({
+    'chr' : h3k9me3_dat['chr'],    
+    'pca': h3k9me3_dat['pca'],    
+    'H3K9me3': h3k9me3_dat['h3k9me3'],
+    'H4K16ac': h4k16ac_dat['h4k16ac'],
+    'H3K27ac': h3k27ac_dat['h3k27ac']
+})
+
+# Remove rows where 'pca' is 0
+pre_dat = pre_dat[pre_dat['pca'] != 0]
+
+# Filter for chromosome 1 data, used to test prediction
+chr1_dat = pre_dat[pre_dat['chr'] == '1']
+
+# Define target variable y for binary classification
+y_spd = chr1_dat['pca'].apply(lambda x: 0 if x < 0 else 1)
+
+# Define features X (H4K16ac and H3K9me3)
+X_spd_169 = chr1_dat[['H4K16ac', 'H3K9me3']]
+
+#use the model built with SPG to predict SPD compartments
+pred_prob = mod_log.predict_proba(X_spd_169)
+
+# roc curve for models
+fpr_spd_169, tpr_spd_169, thresh = roc_curve(y_spd, pred_prob[:,1], pos_label=1)
+
+# roc curve for tpr = fpr 
+random_probs = [0 for i in range(len(y_spd))]
+p_fpr_spd, p_tpr_spd, _ = roc_curve(y_spd, random_probs, pos_label=1)
+
+from sklearn.metrics import roc_auc_score
+
+# auc scores
+auc_score = roc_auc_score(y_spd, pred_prob[:,1])
+
+print(auc_score)
+
