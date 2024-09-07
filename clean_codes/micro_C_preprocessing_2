@@ -1,0 +1,55 @@
+#snakefile
+#filter out invalid fragments (read distance < 1000) and generate cool files
+samples = ['YZ_dTAG_NPCs_1', 'YZ_dTAG_NPCs_2', 'YZ_Neg_NPCs_1', 'YZ_Neg_NPCs_2']
+rule all:
+    input:
+        expand("06_matrix/{sample}_dedup_sel_10kb.cool", sample=samples)
+        
+rule pair_select:
+    input:
+        pairs = "04_pairing/{sample}_dedup_XA.pairs.gz"
+    output:
+        pairs = "04_pairing/{sample}_dedup_sel_XA.pairs",        
+    shell:
+        """
+        pairtools select '(abs(pos1 - pos2) >= 1000)' \
+        {input.pairs} \
+        >{output.pairs}
+        """
+        
+rule pair_gz:
+    input:
+        pairs = "04_pairing/{sample}_dedup_sel_XA.pairs"
+    output:
+        pairs_gz = "04_pairing/{sample}_dedup_sel_XA.pairs.gz"
+    shell:
+        """
+        bgzip {input.pairs}
+        """
+
+
+rule pairix:
+    input:
+        pairs = "04_pairing/{sample}_dedup_sel_XA.pairs.gz"
+    output:
+        pairix = "04_pairing/{sample}_dedup_sel_XA.pairs.gz.px2"
+    shell:
+        """
+        pairix {input.pairs}
+        """
+        
+rule pair_to_cool:
+    input:
+        pairs = "04_pairing/{sample}_dedup_sel_XA.pairs.gz",
+        pairix = "04_pairing/{sample}_dedup_sel_XA.pairs.gz.px2",
+        genome = "02_genome/genome.chrom.sizes"
+    output:
+        cool = "06_matrix/{sample}_dedup_sel_10kb.cool"
+    shell:
+        """
+        cooler cload pairix \
+        -p 16 \
+        {input.genome}:10000 \
+        {input.pairs} \
+        {output.cool}
+        """
